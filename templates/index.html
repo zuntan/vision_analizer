@@ -36,10 +36,10 @@
     <div id="global-wait-overlay" class="fixed inset-0 bg-dark-900 bg-opacity-80 flex items-center justify-center z-50 hidden">
         <div class="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-blue-400"></div>
     </div>
-    
+
     <div class="container mx-auto px-2 py-1">
         <h1 class="text-3xl font-bold text-center mb-2">vision_analizer</h1>
-        
+
         <!-- Drag and Drop Area -->
         <div id="drop-area" class="border-2 border-dashed border-dark-400 rounded-lg p-2 text-center mb-2 cursor-pointer bg-dark-800 shadow-sm transition-colors hover:bg-dark-700">
             <div class="flex flex-col items-center justify-center space-y-1">
@@ -62,8 +62,8 @@
             <div id="wait-overlay" class="absolute inset-0 bg-dark-900 bg-opacity-80 flex items-center justify-center z-10 hidden">
                 <div class="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-blue-400"></div>
             </div>
-            
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <!-- Preview Image -->
                 <div class="md:col-span-1">
                     <label class="block text-sm font-medium text-dark-300 mb-2">プレビュー</label>
@@ -74,12 +74,12 @@
                 </div>
 
                 <!-- Prompt Input and Result Text -->
-                <div class="md:col-span-2">
-                    <div class="grid grid-cols-1 gap-4">
+                <div class="md:col-span-3">
+                    <div class="grid grid-cols-1 gap-1">
                         <!-- Prompt Input -->
                         <div>
-                            <label for="prompt-select" class="block text-sm font-medium text-dark-300 mb-2">プロンプト</label>
-                            <select id="prompt-select" name="prompt" class="w-full rounded-md border border-dark-600 shadow-sm focus:border-blue-400 focus:ring-blue-400 bg-dark-600 text-dark-50">
+                            <label for="prompt-select" class="block text-sm font-medium text-dark-300">プロンプト</label>
+                            <select id="prompt-select" name="prompt" class="w-full rounded-md border border-dark-300 shadow-sm focus:border-blue-400 focus:ring-blue-400 bg-dark-600 text-dark-50 text-xs">
                                 {% for prompt in prompts %}
                                 <option value="{{ prompt }}" {{ 'selected' if prompt == default_prompt else '' }}>{{ prompt }}</option>
                                 {% endfor %}
@@ -88,22 +88,42 @@
 
                         <!-- Result Text -->
                         <div>
-                            <label for="result-text" class="block text-sm font-medium text-dark-300 mb-2">解析結果</label>
-                            <textarea 
-                                id="result-text" 
-                                rows="6" 
-                                class="w-full rounded-md border border-dark-600 shadow-sm focus:border-blue-400 focus:ring-blue-400 bg-dark-700 text-dark-50"
+                            <div class="flex justify-between items-center">
+                                <label for="result-text" class="block text-sm font-medium text-dark-300">解析結果</label>
+                                <button id="copy-button" class="px-2 py-1 bg-dark-700 hover:bg-dark-600 rounded text-xs font-medium transition-colors text-dark-300 flex items-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-1">
+                                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                            <textarea
+                                id="result-text"
+                                rows="15"
+                                class="w-full rounded-md border border-dark-300 shadow-sm focus:border-blue-400 focus:ring-blue-400 bg-dark-700 text-dark-50 text-xs p-1"
                                 readonly
                             ></textarea>
                             <div class="flex justify-between items-center mt-1">
                                 <span id="line-count" class="text-xs text-dark-500">行数: 0</span>
+
+                                <div class="flex justify-start items-center">
+                                    <label class="block text-sm font-medium text-dark-300">行数目安</label>
+                                    <div class="flex justify-between items-center ml-4" id="planned-lines-container" >
+                                        <div class="ml-2">
+                                            <input type="radio" id="planned-none" name="planned-lines" value="" checked >
+                                            <label for="planned-none" class="hover:bg-dark-600 rounded text-xs font-medium transition-colors text-dark-300 cursor-pointer">指定なし</label>
+                                        </div>
+
+                                        {% for line in planned_lines %}
+                                        <div class="ml-2">
+                                            <input type="radio" id="planned-{{ line }}" name="planned-lines" value="{{ line }}" >
+                                            <label for="planned-{{ line }}" class="hover:bg-dark-600 rounded text-xs font-medium transition-colors text-dark-300 cursor-pointer">{{ line }}行</label>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+
                                 <div class="flex space-x-1">
-                                    <button id="copy-button" class="px-2 py-1 bg-dark-700 hover:bg-dark-600 rounded text-xs font-medium transition-colors text-dark-300 flex items-center">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-1">
-                                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                                        </svg>
-                                    </button>
                                     <button id="reanalyze-button" class="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-medium transition-colors flex items-center">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-1">
                                             <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
@@ -215,10 +235,10 @@
                     method: 'POST',
                     body: formData
                 });
-                
+
                 const result = await response.json();
                 console.log("Upload response:", result);
-                
+
                 if (result.filename) {
                     currentImageFilename = result.filename;
                     // 画像プレビューは解析時に表示するため、ここで何もしない
@@ -237,14 +257,18 @@
         async function analyzeImage(filename) {
             const promptSelect = document.getElementById('prompt-select');
             const resultText = document.getElementById('result-text');
-            
+
             try {
                 const prompt = promptSelect.value;
                 console.log("Analyzing with prompt:", prompt);
-                
+
                 // Global wait overlay表示
                 showGlobalWaitOverlay();
-                
+
+                // 選択された予定行数を取得
+                const selectedPlannedLines = document.querySelector('input[name="planned-lines"]:checked');
+                const plannedLinesValue = selectedPlannedLines ? selectedPlannedLines.value : '';
+
                 const response = await fetch(`/analyze`, {
                     method: 'POST',
                     headers: {
@@ -252,37 +276,38 @@
                     },
                     body: JSON.stringify({
                         prompt: prompt,
-                        image_path: filename
+                        image_path: filename,
+                        planned_lines: plannedLinesValue
                     })
                 });
-                
+
                 const result = await response.json();
                 console.log("Analysis response received:", result); // デバッグ用
-                
+
                 // 必要な情報を表示
                 console.log("Checking response fields:");
                 console.log("- Has response field:", !!result.response);
                 console.log("- Has image_data field:", !!result.image_data);
                 console.log("- Image data type:", typeof result.image_data);
-                
+
                 if (result.response) {
                     resultText.value = result.response;
-                    
+
                     // もし画像データがあればプレビュー表示
-                    if (result.image_data && typeof result.image_data === 'string' && 
+                    if (result.image_data && typeof result.image_data === 'string' &&
                         result.image_data.startsWith('data:image/')) {
                         console.log("Displaying preview with image_data");
                         showPreview(result.image_data);
                     } else {
                         console.log("No valid image data to display");
                     }
-                    
+
                     // 解析結果のテキストエリアを一番上までスクロール
                     resultText.scrollTop = 0;
-                    
+
                     // 行数を更新
                     updateLineCount(resultText.value);
-                    
+
                     // 解析結果のテキストエリアを一番上までスクロール
                     resultText.scrollTop = 0;
                 } else if (result.error) {
@@ -310,12 +335,12 @@
             const previewContainer = document.getElementById('preview-container');
             const previewImage = document.getElementById('preview-image');
             const noPreviewText = document.getElementById('no-preview-text');
-            
+
             // Hide text and show image
             noPreviewText.classList.add('hidden');
             previewImage.classList.remove('hidden');
             previewImage.src = imageData; // Base64データを使用
-            
+
             // Show analysis area
             document.getElementById('analysis-area').classList.remove('hidden');
             console.log("Preview shown successfully"); // デバッグ用
@@ -350,10 +375,10 @@
             document.getElementById('no-preview-text').classList.remove('hidden');
             document.getElementById('result-text').value = '';
             currentImageFilename = '';
-            
+
             // Reset file input
             fileInput.value = '';
-            
+
             // 隠していた待機オーバーレイも隠す
             hideGlobalWaitOverlay();
         });
@@ -386,14 +411,14 @@
 
         // Modal close handlers
         document.getElementById('close-modal').addEventListener('click', hideImageModal);
-        
+
         // Close modal when clicking outside the image
         document.getElementById('image-modal').addEventListener('click', function(event) {
             if (event.target === this) {
                 hideImageModal();
             }
         });
-        
+
         // Close modal with Escape key
         document.addEventListener('keydown', function(event) {
             if (event.key === 'Escape') {
@@ -405,7 +430,7 @@
         function showImageModal(imageSrc) {
             const modal = document.getElementById('image-modal');
             const modalImage = document.getElementById('modal-image');
-            
+
             modalImage.src = imageSrc;
             modal.classList.remove('hidden');
             document.body.style.overflow = 'hidden'; // Prevent background scrolling
@@ -427,7 +452,7 @@
                 lineCountElement.textContent = `行数: ${lines}`;
             }
         }
-        
+
         console.log("Script initialized");
     </script>
 </body>

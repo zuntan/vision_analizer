@@ -31,16 +31,18 @@ if __name__ == "__main__":
 class PromptRequest(BaseModel):
     prompt: str
     image_path: str
+    planned_lines: str = ""
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
     return templates.TemplateResponse(
-        "index.html", 
+        "index.html",
         {
             "request": request,
             "prompts": config["prompts"]["choices"],
             "default_prompt": config["prompts"]["choices"][0],
-            "endpoint": config["openai"]["endpoint"]
+            "endpoint": config["openai"]["endpoint"],
+            "planned_lines": config["prompts"].get("planned_lines", [])
         }
     )
 
@@ -49,13 +51,13 @@ async def upload_file(file: UploadFile = File(...)):
     # 一時ファイル名を作成
     file_extension = file.filename.split(".")[-1]
     temp_filename = f"{uuid.uuid4()}.{file_extension}"
-    
+
     # /tmpディレクトリに保存
     file_path = f"/tmp/{temp_filename}"
     with open(file_path, "wb") as buffer:
         content = await file.read()
         buffer.write(content)
-    
+
     logger.info(f"Uploaded file: {file_path}")
     return {"filename": temp_filename}
 
@@ -66,7 +68,7 @@ async def analyze_image(prompt_request: PromptRequest):
         image_path = f"/tmp/{prompt_request.image_path}"
         if not os.path.exists(image_path):
             return JSONResponse(status_code=404, content={"error": "Image file not found"})
-        
+
         # ファイルの拡張子からMIMEタイプを判定
         file_extension = prompt_request.image_path.split('.')[-1].lower()
         # 対応するMIMEタイプをマッピング
@@ -78,10 +80,18 @@ async def analyze_image(prompt_request: PromptRequest):
             'webp': 'webp'
         }
         mime_type = mime_types.get(file_extension, 'jpeg')  # デフォルトはjpeg
-        
+
         with open(image_path, "rb") as image_file:
             encoded_image = base64.b64encode(image_file.read()).decode('utf-8')
-        
+
+        # プロンプトに予定行数制限を追加（存在する場合）
+        system_prompt = config["system_prompt"]["text"]
+        planned_lines = int(prompt_request.planned_lines) if prompt_request.planned_lines else 0
+        if planned_lines > 0:
+            system_prompt += config["system_prompt"]["lines"] % ( planned_lines, )
+
+        logger.info(f"sys prompt: {system_prompt}")
+
         async with httpx.AsyncClient() as client:
             response = await client.post(
                 config["openai"]["endpoint"] + "/chat/completions",
@@ -90,7 +100,7 @@ async def analyze_image(prompt_request: PromptRequest):
                     "messages": [
                         {
                             "role": "system",
-                            "content": config["system_prompt"]["text"]
+                            "content": system_prompt
                         },
                         {
                             "role": "user",
@@ -105,11 +115,11 @@ async def analyze_image(prompt_request: PromptRequest):
                             ]
                         }
                     ],
-                    "temperature": 0.7
+                    "temperature": 0.4
                 },
-                timeout=30.0
+                timeout=120.0
             )
-            
+
             if response.status_code == 200:
                 result = response.json()
                 # 解析結果と画像データを返す
@@ -119,7 +129,7 @@ async def analyze_image(prompt_request: PromptRequest):
                 }
             else:
                 return {"error": f"OpenAI API error: {response.status_code}"}
-                
+
     except Exception as e:
         logger.error(f"Error during analysis: {str(e)}")
         return {"error": str(e)}
