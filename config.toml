@@ -1,0 +1,13 @@
+[openai]
+endpoint = "http://kuro.local:8081/v1"
+
+[system_prompt]
+text = "日本語で応答せよ"
+
+[prompts]
+choices = [
+    "画像を簡素に説明せよ",
+    "画像をできるだけ詳しく説明せよ",
+    "ＵＩ形状を優先して詳しく説明せよ",
+    "テキストを正確に文字化せよ"
+]

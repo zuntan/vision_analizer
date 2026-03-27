@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>vision_analizer</title>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/static/style.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        dark: {
+                            50: '#f8fafc',
+                            100: '#f1f5f9',
+                            200: '#e2e8f0',
+                            300: '#cbd5e1',
+                            400: '#94a3b8',
+                            500: '#64748b',
+                            600: '#475569',
+                            700: '#334155',
+                            800: '#1e293b',
+                            900: '#0f172a',
+                        }
+                    }
+                }
+            },
+            darkMode: 'class',
+        }
+    </script>
+</head>
+<body class="bg-dark-900 text-dark-50 min-h-screen">
+    <!-- Global wait overlay -->
+    <div id="global-wait-overlay" class="fixed inset-0 bg-dark-900 bg-opacity-80 flex items-center justify-center z-50 hidden">
+        <div class="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-blue-400"></div>
+    </div>
+    
+    <div class="container mx-auto px-2 py-1">
+        <h1 class="text-3xl font-bold text-center mb-2">vision_analizer</h1>
+        
+        <!-- Drag and Drop Area -->
+        <div id="drop-area" class="border-2 border-dashed border-dark-400 rounded-lg p-2 text-center mb-2 cursor-pointer bg-dark-800 shadow-sm transition-colors hover:bg-dark-700">
+            <div class="flex flex-col items-center justify-center space-y-1">
+                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-dark-300">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="17 8 12 3 7 8"></polyline>
+                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
+                <p class="text-dark-300">画像ファイルをドラッグ＆ドロップしてください</p>
+                <p class="text-xs text-dark-500">サポート形式: JPEG, PNG, BMP, WEBP</p>
+            </div>
+        </div>
+
+        <!-- Hidden file input for drag & drop area click -->
+        <input type="file" id="file-input" accept=".jpg,.jpeg,.png,.bmp,.webp" class="hidden">
+
+        <!-- Analysis Area -->
+        <div id="analysis-area" class="bg-dark-800 rounded-lg shadow-md p-4 mb-2 hidden relative">
+            <!-- Wait overlay -->
+            <div id="wait-overlay" class="absolute inset-0 bg-dark-900 bg-opacity-80 flex items-center justify-center z-10 hidden">
+                <div class="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-blue-400"></div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <!-- Preview Image -->
+                <div class="md:col-span-1">
+                    <label class="block text-sm font-medium text-dark-300 mb-2">プレビュー</label>
+                    <div id="preview-container" class="border border-dark-600 rounded-md overflow-hidden bg-dark-700 flex items-center justify-center h-32 w-48 cursor-pointer">
+                        <img id="preview-image" src="" alt="Preview" class="max-h-full max-w-full object-contain hidden">
+                        <span id="no-preview-text" class="text-dark-500">画像が選択されていません</span>
+                    </div>
+                </div>
+
+                <!-- Prompt Input and Result Text -->
+                <div class="md:col-span-2">
+                    <div class="grid grid-cols-1 gap-4">
+                        <!-- Prompt Input -->
+                        <div>
+                            <label for="prompt-select" class="block text-sm font-medium text-dark-300 mb-2">プロンプト</label>
+                            <select id="prompt-select" name="prompt" class="w-full rounded-md border border-dark-600 shadow-sm focus:border-blue-400 focus:ring-blue-400 bg-dark-700 text-dark-50">
+                                {% for prompt in prompts %}
+                                <option value="{{ prompt }}" {{ 'selected' if prompt == default_prompt else '' }}>{{ prompt }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Result Text -->
+                        <div>
+                            <label for="result-text" class="block text-sm font-medium text-dark-300 mb-2">解析結果</label>
+                            <textarea 
+                                id="result-text" 
+                                rows="6" 
+                                class="w-full rounded-md border border-dark-600 shadow-sm focus:border-blue-400 focus:ring-blue-400 bg-dark-700 text-dark-50"
+                                readonly
+                            ></textarea>
+                            <div class="flex space-x-2 mt-2">
+                                <button id="copy-button" class="px-4 py-2 bg-dark-700 hover:bg-dark-600 rounded-md text-sm font-medium transition-colors text-dark-300">
+                                    コピー
+                                </button>
+                                <button id="reanalyze-button" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium transition-colors">
+                                    再解析
+                                </button>
+                                <button id="clear-button" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md text-sm font-medium transition-colors">
+                                    クリア
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Image Modal -->
+        <div id="image-modal" class="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 hidden">
+            <div class="relative w-full h-full max-w-none">
+                <img id="modal-image" src="" alt="Modal Preview" class="max-w-full max-h-full object-contain absolute inset-0 m-auto">
+                <button id="close-modal" class="absolute top-4 right-4 bg-dark-800 rounded-full p-2 shadow-lg hover:bg-dark-700">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-dark-50">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Drag and Drop functionality
+        const dropArea = document.getElementById('drop-area');
+        const fileInput = document.getElementById('file-input');
+
+        console.log("Initializing drag and drop..."); // デバッグ用
+
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(function(eventName) {
+            dropArea.addEventListener(eventName, function(e) {
+                preventDefaults(e);
+            }, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropArea.addEventListener(eventName, highlight, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, unhighlight, false);
+        });
+
+        function highlight() {
+            dropArea.classList.add('border-blue-500', 'bg-blue-50');
+        }
+
+        function unhighlight() {
+            dropArea.classList.remove('border-blue-500', 'bg-blue-50');
+        }
+
+        // Handle dropped files
+        dropArea.addEventListener('drop', handleDrop, false);
+
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            if (files.length > 0) {
+                uploadFile(files[0]);
+            }
+        }
+
+        // Click on the drag area to open file dialog
+        dropArea.addEventListener('click', () => {
+            console.log("Click detected - opening file input");
+            fileInput.click();
+        });
+
+        // File input change event
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                uploadFile(e.target.files[0]);
+            }
+        });
+
+        let currentImageFilename = '';
+
+        async function uploadFile(file) {
+            try {
+                console.log("Uploading file:", file.name);
+                const formData = new FormData();
+                formData.append('file', file);
+
+                // Global wait overlay表示
+                showGlobalWaitOverlay();
+
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                console.log("Upload response:", result);
+                
+                if (result.filename) {
+                    currentImageFilename = result.filename;
+                    // 画像プレビューは解析時に表示するため、ここで何もしない
+                    analyzeImage(result.filename);
+                } else {
+                    hideGlobalWaitOverlay();
+                    alert('ファイルのアップロードに失敗しました。');
+                }
+            } catch (error) {
+                console.error('Error uploading file:', error);
+                hideGlobalWaitOverlay();
+                alert('ファイルのアップロード中にエラーが発生しました。');
+            }
+        }
+
+        async function analyzeImage(filename) {
+            const promptSelect = document.getElementById('prompt-select');
+            const resultText = document.getElementById('result-text');
+            
+            try {
+                const prompt = promptSelect.value;
+                console.log("Analyzing with prompt:", prompt);
+                
+                // Global wait overlay表示
+                showGlobalWaitOverlay();
+                
+                const response = await fetch(`/analyze`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        prompt: prompt,
+                        image_path: filename
+                    })
+                });
+                
+                const result = await response.json();
+                console.log("Analysis response received:", result); // デバッグ用
+                
+                // 必要な情報を表示
+                console.log("Checking response fields:");
+                console.log("- Has response field:", !!result.response);
+                console.log("- Has image_data field:", !!result.image_data);
+                console.log("- Image data type:", typeof result.image_data);
+                
+                if (result.response) {
+                    resultText.value = result.response;
+                    
+                    // もし画像データがあればプレビュー表示
+                    if (result.image_data && typeof result.image_data === 'string' && 
+                        result.image_data.startsWith('data:image/')) {
+                        console.log("Displaying preview with image_data");
+                        showPreview(result.image_data);
+                    } else {
+                        console.log("No valid image data to display");
+                    }
+                } else if (result.error) {
+                    resultText.value = `解析エラー: ${result.error}`;
+                } else {
+                    resultText.value = "解析結果を取得できませんでした。";
+                }
+            } catch (error) {
+                console.error('Error analyzing image:', error);
+                resultText.value = `解析中にエラーが発生しました: ${error.message}`;
+            } finally {
+                // Global wait overlay非表示
+                hideGlobalWaitOverlay();
+            }
+        }
+
+        function showPreview(imageData) {
+            console.log("showPreview called with:", imageData.substring(0, 50) + "..."); // デバッグ用
+            const previewContainer = document.getElementById('preview-container');
+            const previewImage = document.getElementById('preview-image');
+            const noPreviewText = document.getElementById('no-preview-text');
+            
+            // Hide text and show image
+            noPreviewText.classList.add('hidden');
+            previewImage.classList.remove('hidden');
+            previewImage.src = imageData; // Base64データを使用
+            
+            // Show analysis area
+            document.getElementById('analysis-area').classList.remove('hidden');
+            console.log("Preview shown successfully"); // デバッグ用
+        }
+
+        // Global wait overlayの表示
+        function showGlobalWaitOverlay() {
+            const globalWaitOverlay = document.getElementById('global-wait-overlay');
+            globalWaitOverlay.classList.remove('hidden');
+        }
+
+        // Global wait overlayの非表示
+        function hideGlobalWaitOverlay() {
+            const globalWaitOverlay = document.getElementById('global-wait-overlay');
+            globalWaitOverlay.classList.add('hidden');
+        }
+
+        // Copy to clipboard
+        document.getElementById('copy-button').addEventListener('click', () => {
+            const resultText = document.getElementById('result-text');
+            resultText.select();
+            document.execCommand('copy');
+            alert('コピーされました！');
+        });
+
+        // Clear button
+        document.getElementById('clear-button').addEventListener('click', () => {
+            // Reset UI
+            document.getElementById('analysis-area').classList.add('hidden');
+            document.getElementById('preview-image').src = '';
+            document.getElementById('preview-image').classList.add('hidden');
+            document.getElementById('no-preview-text').classList.remove('hidden');
+            document.getElementById('result-text').value = '';
+            currentImageFilename = '';
+            
+            // Reset file input
+            fileInput.value = '';
+            
+            // 隠していた待機オーバーレイも隠す
+            hideGlobalWaitOverlay();
+        });
+
+        // Prompt change event
+        document.getElementById('prompt-select').addEventListener('change', () => {
+            if (currentImageFilename) {
+                analyzeImage(currentImageFilename);
+            }
+        });
+
+        // Re-analyze button
+        document.getElementById('reanalyze-button').addEventListener('click', () => {
+            if (currentImageFilename) {
+                console.log("Re-analyzing image:", currentImageFilename);
+                analyzeImage(currentImageFilename);
+            } else {
+                console.log("No image to re-analyze");
+            }
+        });
+
+        // Preview click handler
+        document.getElementById('preview-container').addEventListener('click', function() {
+            const previewImage = document.getElementById('preview-image');
+            if (!previewImage.classList.contains('hidden')) {
+                const imageData = previewImage.src;
+                showImageModal(imageData);
+            }
+        });
+
+        // Modal close handlers
+        document.getElementById('close-modal').addEventListener('click', hideImageModal);
+        
+        // Close modal when clicking outside the image
+        document.getElementById('image-modal').addEventListener('click', function(event) {
+            if (event.target === this) {
+                hideImageModal();
+            }
+        });
+        
+        // Close modal with Escape key
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                hideImageModal();
+            }
+        });
+
+        // Show image in modal
+        function showImageModal(imageSrc) {
+            const modal = document.getElementById('image-modal');
+            const modalImage = document.getElementById('modal-image');
+            
+            modalImage.src = imageSrc;
+            modal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden'; // Prevent background scrolling
+        }
+
+        // Hide image modal
+        function hideImageModal() {
+            const modal = document.getElementById('image-modal');
+            modal.classList.add('hidden');
+            document.body.style.overflow = ''; // Restore scrolling
+        }
+        
+        console.log("Script initialized");
+    </script>
+</body>
+</html>
