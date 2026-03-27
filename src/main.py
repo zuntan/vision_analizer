@@ -89,6 +89,10 @@ async def analyze_image(prompt_request: PromptRequest):
                     "model": "llava",
                     "messages": [
                         {
+                            "role": "system",
+                            "content": config["system_prompt"]["text"]
+                        },
+                        {
                             "role": "user",
                             "content": [
                                 {"type": "text", "text": prompt_request.prompt},
