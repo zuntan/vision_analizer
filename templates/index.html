@@ -453,6 +453,25 @@
             }
         }
 
+        // Paste event listener for image upload
+        document.addEventListener('paste', (event) => {
+            const items = event.clipboardData.items;
+            
+            for (let i = 0; i < items.length; i++) {
+                // Check if data is an image
+                if (items[i].type.indexOf('image') !== -1) {
+                    // Get file object (Blob)
+                    const blob = items[i].getAsFile();
+                    
+                    // Upload the blob as a file
+                    uploadFile(blob);
+                    
+                    console.log('Image pasted and uploaded:', blob);
+                    break; // Only process first image
+                }
+            }
+        });
+
         console.log("Script initialized");
     </script>
 </body>
