@@ -90,7 +90,7 @@ async def analyze_image(prompt_request: PromptRequest):
         if planned_lines > 0:
             system_prompt += config["system_prompt"]["lines"] % ( planned_lines, )
 
-        logger.info(f"sys prompt: {system_prompt}")
+        # logger.info(f"sys prompt: {system_prompt}")
 
         async with httpx.AsyncClient() as client:
             response = await client.post(

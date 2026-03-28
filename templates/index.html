@@ -167,8 +167,6 @@
         const dropArea = document.getElementById('drop-area');
         const fileInput = document.getElementById('file-input');
 
-        console.log("Initializing drag and drop..."); // デバッグ用
-
         ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(function(eventName) {
             dropArea.addEventListener(eventName, function(e) {
                 preventDefaults(e);
@@ -209,7 +207,6 @@
 
         // Click on the drag area to open file dialog
         dropArea.addEventListener('click', () => {
-            console.log("Click detected - opening file input");
             fileInput.click();
         });
 
@@ -224,7 +221,6 @@
 
         async function uploadFile(file) {
             try {
-                console.log("Uploading file:", file.name);
                 const formData = new FormData();
                 formData.append('file', file);
 
@@ -237,7 +233,6 @@
                 });
 
                 const result = await response.json();
-                console.log("Upload response:", result);
 
                 if (result.filename) {
                     currentImageFilename = result.filename;
@@ -260,7 +255,6 @@
 
             try {
                 const prompt = promptSelect.value;
-                console.log("Analyzing with prompt:", prompt);
 
                 // Global wait overlay表示
                 showGlobalWaitOverlay();
@@ -282,24 +276,15 @@
                 });
 
                 const result = await response.json();
-                console.log("Analysis response received:", result); // デバッグ用
 
                 // 必要な情報を表示
-                console.log("Checking response fields:");
-                console.log("- Has response field:", !!result.response);
-                console.log("- Has image_data field:", !!result.image_data);
-                console.log("- Image data type:", typeof result.image_data);
-
                 if (result.response) {
                     resultText.value = result.response;
 
                     // もし画像データがあればプレビュー表示
                     if (result.image_data && typeof result.image_data === 'string' &&
                         result.image_data.startsWith('data:image/')) {
-                        console.log("Displaying preview with image_data");
                         showPreview(result.image_data);
-                    } else {
-                        console.log("No valid image data to display");
                     }
 
                     // 解析結果のテキストエリアを一番上までスクロール
@@ -331,7 +316,6 @@
         }
 
         function showPreview(imageData) {
-            console.log("showPreview called with:", imageData.substring(0, 50) + "..."); // デバッグ用
             const previewContainer = document.getElementById('preview-container');
             const previewImage = document.getElementById('preview-image');
             const noPreviewText = document.getElementById('no-preview-text');
@@ -343,7 +327,6 @@
 
             // Show analysis area
             document.getElementById('analysis-area').classList.remove('hidden');
-            console.log("Preview shown successfully"); // デバッグ用
         }
 
         // Global wait overlayの表示
@@ -393,10 +376,7 @@
         // Re-analyze button
         document.getElementById('reanalyze-button').addEventListener('click', () => {
             if (currentImageFilename) {
-                console.log("Re-analyzing image:", currentImageFilename);
                 analyzeImage(currentImageFilename);
-            } else {
-                console.log("No image to re-analyze");
             }
         });
 
@@ -466,7 +446,6 @@
                     // Upload the blob as a file
                     uploadFile(blob);
                     
-                    console.log('Image pasted and uploaded:', blob);
                     break; // Only process first image
                 }
             }
