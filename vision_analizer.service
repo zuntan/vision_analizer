@@ -1,0 +1,16 @@
+[Unit]
+Description=Vision Analyzer Web Application
+After=network.target
+
+[Service]
+Type=simple
+User=junichi
+Group=junichi
+WorkingDirectory=/opt3/ollama/vision_analizer
+Environment="PATH=/opt3/ollama/vision_analizer/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+ExecStart=/opt3/ollama/vision_analizer/run.sh
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
