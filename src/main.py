@@ -24,10 +24,6 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8001, reload=True)
-
 class PromptRequest(BaseModel):
     prompt: str
     image_path: str
@@ -42,14 +38,33 @@ async def read_root(request: Request):
             "prompts": config["prompts"]["choices"],
             "default_prompt": config["prompts"]["choices"][0],
             "endpoint": config["openai"]["endpoint"],
-            "planned_lines": config["prompts"].get("planned_lines", [])
+            "planned_lines": config["prompts"].get("planned_lines", []),
+            "app_info": config.get("app_info", {})
         }
     )
 
 @app.post("/upload")
 async def upload_file(file: UploadFile = File(...)):
+    # 許可するファイル拡張子とMIMEタイプ
+    allowed_extensions = {"jpg", "jpeg", "png", "bmp", "webp"}
+    allowed_mime_types = {"image/jpeg", "image/png", "image/bmp", "image/webp"}
+
+    # ファイル拡張子のチェック
+    file_extension = file.filename.split(".")[-1].lower()
+    if file_extension not in allowed_extensions:
+        return JSONResponse(
+            status_code=400,
+            content={"error": f"Unsupported file extension: {file_extension}"}
+        )
+
+    # MIMEタイプのチェック (より安全)
+    if file.content_type not in allowed_mime_types:
+        return JSONResponse(
+            status_code=400,
+            content={"error": f"Unsupported content type: {file.content_type}"}
+        )
+
     # 一時ファイル名を作成
-    file_extension = file.filename.split(".")[-1]
     temp_filename = f"{uuid.uuid4()}.{file_extension}"
 
     # /tmpディレクトリに保存
@@ -96,7 +111,7 @@ async def analyze_image(prompt_request: PromptRequest):
             response = await client.post(
                 config["openai"]["endpoint"] + "/chat/completions",
                 json={
-                    "model": "llava",
+                    "model": config["openai"]["model"],
                     "messages": [
                         {
                             "role": "system",
@@ -134,3 +149,7 @@ async def analyze_image(prompt_request: PromptRequest):
     except Exception as e:
         logger.error(f"Error during analysis: {str(e)}")
         return {"error": str(e)}
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8001, reload=True)

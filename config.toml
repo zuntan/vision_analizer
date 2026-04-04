@@ -1,5 +1,6 @@
 [openai]
 endpoint = "http://kuro.local:8080/v1"
+model = "gemma4"
 
 [system_prompt]
 text = """
@@ -28,3 +29,7 @@ choices = [
 ]
 
 planned_lines = [10, 20, 50]
+
+[app_info]
+model_name = "unsloth/gemma-4-26B-A4B-it-GGUF"
+model_url = "https://huggingface.co/unsloth/gemma-4-26B-A4B-it-GGUF"
