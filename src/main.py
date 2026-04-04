@@ -105,17 +105,18 @@ async def analyze_image(prompt_request: PromptRequest):
                         {
                             "role": "user",
                             "content": [
-                                {"type": "text", "text": prompt_request.prompt},
                                 {
                                     "type": "image_url",
                                     "image_url": {
                                         "url": f"data:image/{mime_type};base64,{encoded_image}"
                                     }
-                                }
+                                },
+                                {"type": "text", "text": prompt_request.prompt}
                             ]
                         }
                     ],
-                    "temperature": 0.4
+                    "temperature": 0.4,
+                    "enable_thinking": "false",
                 },
                 timeout=120.0
             )
@@ -133,7 +134,3 @@ async def analyze_image(prompt_request: PromptRequest):
     except Exception as e:
         logger.error(f"Error during analysis: {str(e)}")
         return {"error": str(e)}
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host=server_host, port=server_port, reload=True)

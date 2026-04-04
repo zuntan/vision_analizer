@@ -1,5 +1,5 @@
 [openai]
-endpoint = "http://kuro.local:8081/v1"
+endpoint = "http://kuro.local:8080/v1"
 
 [system_prompt]
 text = """
