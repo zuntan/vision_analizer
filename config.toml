@@ -1,6 +1,8 @@
 [openai]
 endpoint = "http://kuro.local:8080/v1"
 model = "gemma4"
+temperature = 0.9
+reasoning_effort = "low"
 
 [system_prompt]
 text = """

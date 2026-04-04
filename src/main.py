@@ -120,18 +120,18 @@ async def analyze_image(prompt_request: PromptRequest):
                         {
                             "role": "user",
                             "content": [
+                                {"type": "text", "text": prompt_request.prompt},
                                 {
                                     "type": "image_url",
                                     "image_url": {
                                         "url": f"data:image/{mime_type};base64,{encoded_image}"
                                     }
-                                },
-                                {"type": "text", "text": prompt_request.prompt}
+                                }
                             ]
                         }
                     ],
-                    "temperature": 0.4,
-                    "enable_thinking": "false",
+                    "temperature": config["openai"].get("temperature", 0.9),
+                    "reasoning_effort": config["openai"].get("reasoning_effort", "low")
                 },
                 timeout=120.0
             )
